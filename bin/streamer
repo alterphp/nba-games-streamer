@@ -76,5 +76,7 @@ $teamsList = [
         $output->writeln('You have just selected: '.$game);
 
         (new Process(['omxplayer', $games[$game]]))->start();
+
+        sleep(5);
     })
     ->run();
