@@ -54,8 +54,9 @@ $teamsList = [
             $responses[$teamName] = $client->request('GET', \sprintf(PLAYLIST_RETRIEVER_URL_PATTERN, $teamName));
         }
         foreach ($responses as $teamName => $response) {
-            if (\preg_match('@source: \'([A-Za-z/.-_]+\.m3u8)\',@', $response->getContent(), $matches)) {
-                $games[$teamName] = $matches[1];
+            if (\preg_match('@source: \'([A-Za-z/.-_]+playlist\.m3u8)\',@', $response->getContent(), $matches)) {
+                $games[$teamName]['playlist'] = $matches[1];
+                $games[$teamName]['chunks'] = \str_replace('playlist.m3u8', 'chunks.m3u8', $mayches[1]);
             }
             unset($response);
         }
@@ -75,10 +76,10 @@ $teamsList = [
         $game = $helper->ask($input, $output, $question);
         $io->comment('You have just selected: '.$game);
 
-        $cmd = \sprintf('omxplayer \'%s\'', $games[$game]);
+        $cmd = \sprintf('omxplayer \'%s\'', $games[$game]['chunks']);
         $io->comment($cmd);
         (new Process([$cmd]))->start();
 
-        sleep(5);
+        // sleep(5);
     })
     ->run();
