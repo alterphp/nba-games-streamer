@@ -181,57 +181,6 @@
         "homepage": "https://symfony.com"
     },
     {
-        "name": "symfony/flex",
-        "version": "v1.9.1",
-        "version_normalized": "1.9.1.0",
-        "source": {
-            "type": "git",
-            "url": "https://github.com/symfony/flex.git",
-            "reference": "0e752e47d8382361ca2d7ef016f549828185ddb6"
-        },
-        "dist": {
-            "type": "zip",
-            "url": "https://api.github.com/repos/symfony/flex/zipball/0e752e47d8382361ca2d7ef016f549828185ddb6",
-            "reference": "0e752e47d8382361ca2d7ef016f549828185ddb6",
-            "shasum": ""
-        },
-        "require": {
-            "composer-plugin-api": "^1.0|^2.0",
-            "php": ">=7.1"
-        },
-        "require-dev": {
-            "composer/composer": "^1.0.2|^2.0",
-            "symfony/dotenv": "^4.4|^5.0",
-            "symfony/phpunit-bridge": "^4.4|^5.0",
-            "symfony/process": "^3.4|^4.4|^5.0"
-        },
-        "time": "2020-07-14T15:18:33+00:00",
-        "type": "composer-plugin",
-        "extra": {
-            "branch-alias": {
-                "dev-master": "1.8-dev"
-            },
-            "class": "Symfony\\Flex\\Flex"
-        },
-        "installation-source": "dist",
-        "autoload": {
-            "psr-4": {
-                "Symfony\\Flex\\": "src"
-            }
-        },
-        "notification-url": "https://packagist.org/downloads/",
-        "license": [
-            "MIT"
-        ],
-        "authors": [
-            {
-                "name": "Fabien Potencier",
-                "email": "fabien.potencier@gmail.com"
-            }
-        ],
-        "description": "Composer plugin for Symfony"
-    },
-    {
         "name": "symfony/http-client",
         "version": "v5.1.3",
         "version_normalized": "5.1.3.0",
