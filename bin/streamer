@@ -78,8 +78,9 @@ $teamsList = [
 
         $cmd = \sprintf('omxplayer \'%s\'', $games[$game]['chunks']);
         $io->comment($cmd);
-        (new Process([$cmd]))->start();
 
-        // sleep(5);
+        $helper = $this->getHelper('process');
+        $process = new Process(['omxplayer', $games[$game]['chunks']]);
+        $helper->run($output, $process);
     })
     ->run();
