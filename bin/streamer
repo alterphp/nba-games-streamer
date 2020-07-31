@@ -1,0 +1,80 @@
+#!/usr/bin/env php
+<?php
+require __DIR__.'/../vendor/autoload.php';
+
+use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Question\ChoiceQuestion;
+use Symfony\Component\Console\SingleCommandApplication;
+use Symfony\Component\Console\Style\SymfonyStyle;
+use Symfony\Component\HttpClient\HttpClient;
+use Symfony\Component\Process\Process;
+
+const PLAYLIST_RETRIEVER_URL_PATTERN = 'http://givemenbastreams.com/nba.php?g=%s';
+
+$teamsList = [
+    'bucks',
+    'bulls',
+    'cavaliers',
+    'celtics',
+    'clippers',
+    'grizzlies',
+    'hawks',
+    'heat',
+    'hornets',
+    'jazz',
+    'kings',
+    'knicks',
+    'lakers',
+    'magic',
+    'mavericks',
+    'nuggets',
+    'pacers',
+    'pelicans',
+    'pistons',
+    'raptors',
+    'rockets',
+    'sixers',
+    'spurs',
+    'suns',
+    'thunder',
+    'timberwolves',
+    'trailblazers', // blazers ?
+    'warriors',
+    'wizards',
+];
+
+(new SingleCommandApplication())
+    ->setDescription('Stream NBA games with OMX Player')
+    ->setCode(function (InputInterface $input, OutputInterface $output) use ($teamsList) {
+        $client = HttpClient::create();
+        foreach ($teamsList as $teamName) {
+            $responses[$teamName] = $client->request('GET', \sprintf(PLAYLIST_RETRIEVER_URL_PATTERN, $teamName));
+        }
+        foreach ($responses as $teamName => $response) {
+            if (\preg_match('@source: \'([A-Za-z/.-_]+\.m3u8)\',@', $response->getContent(), $matches)) {
+                $games[$teamName] = $matches[1];
+            }
+            unset($response);
+        }
+
+        $io = new SymfonyStyle($input, $output);
+
+        if (empty($games)) {
+            $io->error(\sprintf('No NBA game found with %s', PLAYLIST_RETRIEVER_URL_PATTERN));
+
+            return 0;
+        }
+
+
+        $helper = $this->getHelper('question');
+        $question = new ChoiceQuestion('Select your game !', \array_keys($games));
+
+        $game = $helper->ask($input, $output, $question);
+        $output->writeln('You have just selected: '.$game);
+
+        (new Process(['omxplayer', $games[$game]]))->start();
+    })
+    ->run();
