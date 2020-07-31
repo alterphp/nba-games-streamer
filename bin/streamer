@@ -73,9 +73,11 @@ $teamsList = [
         $question = new ChoiceQuestion('Select your game !', \array_keys($games));
 
         $game = $helper->ask($input, $output, $question);
-        $output->writeln('You have just selected: '.$game);
+        $io->comment('You have just selected: '.$game);
 
-        (new Process(['omxplayer', $games[$game]]))->start();
+        $cmd = \sprintf('omxplayer \'%s\'', $games[$game]);
+        $io->comment($cmd);
+        (new Process([$cmd]))->start();
 
         sleep(5);
     })
