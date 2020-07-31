@@ -81,6 +81,7 @@ $teamsList = [
 
         $helper = $this->getHelper('process');
         $process = new Process(['omxplayer', $games[$game]['chunks']]);
+        $process->setTimeout(null);
         $helper->run($output, $process);
     })
     ->run();
