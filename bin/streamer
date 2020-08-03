@@ -2,6 +2,8 @@
 <?php
 require __DIR__.'/../vendor/autoload.php';
 
+use Chrisyue\PhpM3u8\Facade\ParserFacade;
+use Chrisyue\PhpM3u8\Stream\TextStream;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -46,6 +48,44 @@ $teamsList = [
     'wizards',
 ];
 
+function getM3u8Chunklists(string $playlistUri, string $playlistContent): array
+{
+    $m3u8Parser = new ParserFacade();
+    $m3u8ChunkLists = $m3u8Parser->parse(new TextStream($playlistContent));
+
+    $chunklists = [];
+
+    foreach ($m3u8ChunkLists['EXT-X-STREAM-INF'] as $m3u8ChunkList) {
+        $resolution = $m3u8ChunkList['RESOLUTION']->__toString();
+        $uri = \sprintf('%s/%s', \dirname($playlistUri), $m3u8ChunkList['uri']);
+
+        if (false === \strpos($uri, '/../')) {
+            $chunklists[$resolution] = $uri;
+        } else {
+            $parsedUri = \parse_url($uri);
+            $chunklists[$resolution] = \sprintf(
+                '%s://%s%s',
+                $parsedUri['scheme'],
+                $parsedUri['host'],
+                resolveDoubleDottedPath($parsedUri['path'])
+            );
+        }
+    }
+
+    return $chunklists;
+}
+
+function resolveDoubleDottedPath(string $unresolvedPath): string
+{
+    if (false === \strpos($unresolvedPath, '/..')) {
+        return $unresolvedPath;
+    }
+
+    $pathParts = \explode('/..', $unresolvedPath, 2);
+
+    return resolveDoubleDottedPath(\dirname($pathParts[0]).$pathParts[1]);
+}
+
 (new SingleCommandApplication())
     ->setDescription('Stream NBA games with OMX Player')
     ->setCode(function (InputInterface $input, OutputInterface $output) use ($teamsList) {
@@ -56,7 +96,6 @@ $teamsList = [
         foreach ($responses as $teamName => $response) {
             if (\preg_match('@source: \'([A-Za-z/.-_]+playlist\.m3u8)\',@', $response->getContent(), $matches)) {
                 $games[$teamName]['playlist'] = $matches[1];
-                $games[$teamName]['chunks'] = \str_replace('playlist.m3u8', 'chunks.m3u8', $matches[1]);
             }
             unset($response);
         }
@@ -70,18 +109,25 @@ $teamsList = [
         }
 
 
-        $helper = $this->getHelper('question');
-        $question = new ChoiceQuestion('Select your game !', \array_keys($games));
+        $questionHelper = $this->getHelper('question');
 
-        $game = $helper->ask($input, $output, $question);
+        $gameQuestion = new ChoiceQuestion('Select your game !', \array_keys($games));
+        $game = $questionHelper->ask($input, $output, $gameQuestion);
         $io->comment('You have just selected: '.$game);
 
-        $cmd = \sprintf('omxplayer \'%s\'', $games[$game]['chunks']);
+        $playlistContent = $client->request('GET', $games[$game]['playlist'])->getContent();
+
+        $chunklists = getM3u8Chunklists($games[$game]['playlist'], $playlistContent);
+
+        $resolutionQuestion = new ChoiceQuestion('Select your resolution !', \array_keys($chunklists));
+        $resolution = $questionHelper->ask($input, $output, $resolutionQuestion);
+
+        $cmd = \sprintf('omxplayer \'%s\'', $chunklists[$resolution]);
         $io->comment($cmd);
 
-        $helper = $this->getHelper('process');
-        $process = new Process(['omxplayer', $games[$game]['chunks']]);
+        $processHelper = $this->getHelper('process');
+        $process = new Process(['omxplayer', $chunklists[$resolution]]);
         $process->setTimeout(null);
-        $helper->run($output, $process);
+        $processHelper->run($output, $process);
     })
     ->run();
