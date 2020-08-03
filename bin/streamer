@@ -113,7 +113,6 @@ function resolveDoubleDottedPath(string $unresolvedPath): string
 
         $gameQuestion = new ChoiceQuestion('Select your game !', \array_keys($games));
         $game = $questionHelper->ask($input, $output, $gameQuestion);
-        $io->comment('You have just selected: '.$game);
 
         $playlistContent = $client->request('GET', $games[$game]['playlist'])->getContent();
 
