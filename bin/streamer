@@ -14,39 +14,110 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\HttpClient\HttpClient;
 use Symfony\Component\Process\Process;
 
-const PLAYLIST_RETRIEVER_URL_PATTERN = 'http://givemenbastreams.com/nba.php?g=%s';
+// For NBA: http://givemereddit.stream/nba/<team>-live-stream
+// For F1: http://givemereddit.stream/formula-1/f1-live-stream
 
-$teamsList = [
-    'bucks',
-    'bulls',
-    'cavaliers',
-    'celtics',
-    'clippers',
-    'grizzlies',
-    'hawks',
-    'heat',
-    'hornets',
-    'jazz',
-    'kings',
-    'knicks',
-    'lakers',
-    'magic',
-    'mavericks',
-    'nuggets',
-    'pacers',
-    'pelicans',
-    'pistons',
-    'raptors',
-    'rockets',
-    'sixers',
-    'spurs',
-    'suns',
-    'thunder',
-    'timberwolves',
-    'trailblazers', // blazers ?
-    'warriors',
-    'wizards',
+$sports = [
+    'nba' => [
+        'search-uri' => 'http://givemereddit.stream/nba/%s-live-stream',
+        'teams' => [
+            'bucks',
+            'bulls',
+            'cavaliers',
+            'celtics',
+            'clippers',
+            'grizzlies',
+            'hawks',
+            'heat',
+            'hornets',
+            'jazz',
+            'kings',
+            'knicks',
+            'lakers',
+            'magic',
+            'mavericks',
+            'nuggets',
+            'pacers',
+            'pelicans',
+            'pistons',
+            'raptors',
+            'rockets',
+            'sixers',
+            'spurs',
+            'suns',
+            'thunder',
+            'timberwolves',
+            'trailblazers', // blazers ?
+            'warriors',
+            'wizards',
+        ],
+    ],
+    'f1' => [
+        'search-uri' => 'http://givemereddit.stream/formula-1/f1-live-stream',
+    ],
 ];
+
+(new SingleCommandApplication())
+    ->setDescription('Search sport event streams to play with OMX Player')
+    ->setCode(function (InputInterface $input, OutputInterface $output) use ($sports) {
+        $io = new SymfonyStyle($input, $output);
+        $questionHelper = $this->getHelper('question');
+
+        $sportQuestion = new ChoiceQuestion('Select your sport !', \array_keys($sports));
+        $sport = $questionHelper->ask($input, $output, $sportQuestion);
+
+        $client = HttpClient::create();
+
+        // Each case must define a m3u8 master $playlistUri.
+        switch ($sport) {
+            case 'nba':
+                foreach ($sports['nba']['teams'] as $teamName) {
+                    $responses[$teamName] = $client->request('GET', \sprintf($sports['nba']['search-uri'], $teamName));
+                }
+                foreach ($responses as $teamName => $response) {
+                    if (\preg_match('@source: \'([A-Za-z/.-_]+playlist\.m3u8)\',@', $response->getContent(), $matches)) {
+                        $playlistUris[$teamName] = $matches[1];
+                    }
+                    unset($response);
+                }
+                if (empty($playlistUris)) {
+                    $io->error(\sprintf('No NBA game found with %s', $sports['nba']['search-uri']));
+                    return 0;
+                }
+                $gameQuestion = new ChoiceQuestion('Select your game !', \array_keys($playlistUris));
+                $team = $questionHelper->ask($input, $output, $gameQuestion);
+                $playlistUri = $playlistUris[$team];
+                break;
+            case 'f1':
+                $response = $client->request('GET', $sports['f1']['search-uri']);
+                echo $response->getContent();die;
+                if (\preg_match('@source: \'([A-Za-z/.-_]+playlist\.m3u8)\',@', $response->getContent(), $matches)) {
+                    $playlistUri = $matches[1];
+                } else {
+                    $io->error(\sprintf('No F1 live found with %s', $sports['f1']['search-uri']));
+                    return 0;
+                }
+                unset($response);
+                break;
+            default:
+                throw new \InvalidArgumentException('Invalid selected sport!');
+        }
+
+        $playlistContent = $client->request('GET', $playlistUri)->getContent();
+        $chunklists = getM3u8Chunklists($playlistUri, $playlistContent);
+
+        $resolutionQuestion = new ChoiceQuestion('Select your resolution !', \array_keys($chunklists));
+        $resolution = $questionHelper->ask($input, $output, $resolutionQuestion);
+
+        $cmd = \sprintf('omxplayer \'%s\'', $chunklists[$resolution]);
+        $io->comment($cmd);
+
+        $processHelper = $this->getHelper('process');
+        $process = new Process(['omxplayer', $chunklists[$resolution]]);
+        $process->setTimeout(null);
+        $processHelper->run($output, $process);
+    })
+    ->run();
 
 function getM3u8Chunklists(string $playlistUri, string $playlistContent): array
 {
@@ -85,48 +156,3 @@ function resolveDoubleDottedPath(string $unresolvedPath): string
 
     return resolveDoubleDottedPath(\dirname($pathParts[0]).$pathParts[1]);
 }
-
-(new SingleCommandApplication())
-    ->setDescription('Stream NBA games with OMX Player')
-    ->setCode(function (InputInterface $input, OutputInterface $output) use ($teamsList) {
-        $client = HttpClient::create();
-        foreach ($teamsList as $teamName) {
-            $responses[$teamName] = $client->request('GET', \sprintf(PLAYLIST_RETRIEVER_URL_PATTERN, $teamName));
-        }
-        foreach ($responses as $teamName => $response) {
-            if (\preg_match('@source: \'([A-Za-z/.-_]+playlist\.m3u8)\',@', $response->getContent(), $matches)) {
-                $games[$teamName]['playlist'] = $matches[1];
-            }
-            unset($response);
-        }
-
-        $io = new SymfonyStyle($input, $output);
-
-        if (empty($games)) {
-            $io->error(\sprintf('No NBA game found with %s', PLAYLIST_RETRIEVER_URL_PATTERN));
-
-            return 0;
-        }
-
-
-        $questionHelper = $this->getHelper('question');
-
-        $gameQuestion = new ChoiceQuestion('Select your game !', \array_keys($games));
-        $game = $questionHelper->ask($input, $output, $gameQuestion);
-
-        $playlistContent = $client->request('GET', $games[$game]['playlist'])->getContent();
-
-        $chunklists = getM3u8Chunklists($games[$game]['playlist'], $playlistContent);
-
-        $resolutionQuestion = new ChoiceQuestion('Select your resolution !', \array_keys($chunklists));
-        $resolution = $questionHelper->ask($input, $output, $resolutionQuestion);
-
-        $cmd = \sprintf('omxplayer \'%s\'', $chunklists[$resolution]);
-        $io->comment($cmd);
-
-        $processHelper = $this->getHelper('process');
-        $process = new Process(['omxplayer', $chunklists[$resolution]]);
-        $process->setTimeout(null);
-        $processHelper->run($output, $process);
-    })
-    ->run();
