@@ -21,6 +21,7 @@ $sports = [
     'nba' => [
         'search-uri' => 'http://givemenbastreams.com/nba.php?g=%s',
         'teams' => [
+            '76ers',
             'bucks',
             'bulls',
             'cavaliers',
@@ -42,7 +43,6 @@ $sports = [
             'pistons',
             'raptors',
             'rockets',
-            'sixers',
             'spurs',
             'suns',
             'thunder',
@@ -106,7 +106,12 @@ $sports = [
         $playlistContent = $client->request('GET', $playlistUri)->getContent();
         $chunklists = getM3u8Chunklists($playlistUri, $playlistContent);
 
-        $resolutionQuestion = new ChoiceQuestion('Select your resolution !', \array_keys($chunklists));
+        $resolutions = \array_keys($chunklists);
+        $resolutionQuestion = new ChoiceQuestion(
+            'Select your resolution !',
+            $resolutions,
+            $resolutions[0]
+        );
         $resolution = $questionHelper->ask($input, $output, $resolutionQuestion);
 
         $cmd = \sprintf('omxplayer \'%s\'', $chunklists[$resolution]);
