@@ -107,10 +107,11 @@ $sports = [
         $chunklists = getM3u8Chunklists($playlistUri, $playlistContent);
 
         $resolutions = \array_keys($chunklists);
+        $defaultResolution = $resolutions[0];
         $resolutionQuestion = new ChoiceQuestion(
-            'Select your resolution !',
+            \sprintf('Select your resolution [<comment>%s</comment>]', $defaultResolution),
             $resolutions,
-            $resolutions[0]
+            $defaultResolution
         );
         $resolution = $questionHelper->ask($input, $output, $resolutionQuestion);
 
