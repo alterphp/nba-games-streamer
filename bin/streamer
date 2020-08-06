@@ -132,12 +132,12 @@ $sports = [
         $cmd = \sprintf('omxplayer \'%s\'', $chunklists[$resolution]);
         $io->comment($cmd);
 
+        writeLastCall($callArgs);
+
         $processHelper = $this->getHelper('process');
         $process = new Process(['omxplayer', $chunklists[$resolution]]);
         $process->setTimeout(null);
         $processHelper->run($output, $process);
-
-        writeLastCall($callArgs);
     })
     ->run();
 
