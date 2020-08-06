@@ -23,6 +23,7 @@ $sports = [
         'teams' => [
             '76ers',
             'bucks',
+            'blazers',
             'bulls',
             'cavaliers',
             'celtics',
@@ -47,7 +48,6 @@ $sports = [
             'suns',
             'thunder',
             'timberwolves',
-            'trailblazers', // blazers ?
             'warriors',
             'wizards',
         ],
