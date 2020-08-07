@@ -15,7 +15,7 @@ use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\HttpClient\HttpClient;
 use Symfony\Component\Process\Process;
 
-const LASTCALL_FILEPATH = __DIR__.'/../var/.last-call';
+const LASTCALL_FILEPATH = '%s/.sports-stream/.last-call';
 
 // For NBA: http://givemereddit.stream/nba/<team>-live-stream
 // For F1: http://givemereddit.stream/formula-1/f1-live-stream
@@ -141,22 +141,31 @@ $sports = [
     })
     ->run();
 
+function getLastFilePath(): string
+{
+    return \sprintf(LASTCALL_FILEPATH, $_SERVER['HOME']);
+}
+
 function writeLastCall(array $lastCall): void
 {
     $filesystem = new Filesystem();
 
-    $filesystem->dumpFile(LASTCALL_FILEPATH, json_encode($lastCall));
+    if (!$filesystem->exists(\dirname(getLastFilePath()))) {
+        $filesystem->mkdir(\dirname(getLastFilePath()));
+    }
+
+    $filesystem->dumpFile(getLastFilePath(), json_encode($lastCall));
 }
 
 function getLastCall(): ?array
 {
     $filesystem = new Filesystem();
 
-    if (!$filesystem->exists(LASTCALL_FILEPATH)) {
+    if (!$filesystem->exists(getLastFilePath())) {
         return null;
     }
 
-    $lastCallContent = \file_get_contents(LASTCALL_FILEPATH);
+    $lastCallContent = \file_get_contents(getLastFilePath());
 
     return \json_decode($lastCallContent, true);
 }
