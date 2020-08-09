@@ -10,11 +10,10 @@ use Symfony\Component\Console\Question\ChoiceQuestion;
 use Symfony\Component\Console\SingleCommandApplication;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Filesystem\Filesystem;
-use Symfony\Component\HttpClient\HttpClient;
+use Symfony\Component\HttpClient\CurlHttpClient as HttpClient;
 use Symfony\Component\Process\Process;
 
 const LASTCALL_FILEPATH = '%s/.sports-stream/.last-call';
-
 const PLAYLIST_REGEXP_PATTERN = '@source: \'(https?://[A-Za-z./-]+/playlist\.m3u8)\',@';
 
 // For NBA: http://givemereddit.stream/nba/<team>-live-stream
@@ -76,7 +75,7 @@ $sports = [
         $sport = $questionHelper->ask($input, $output, $sportQuestion);
         $callArgs['sport'] = $sport;
 
-        $client = HttpClient::create();
+        $client = new HttpClient();
 
         // Each case must define a m3u8 master $playlistUri.
         switch ($sport) {
