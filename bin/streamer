@@ -4,9 +4,7 @@ require __DIR__.'/../vendor/autoload.php';
 
 use Chrisyue\PhpM3u8\Facade\ParserFacade;
 use Chrisyue\PhpM3u8\Stream\TextStream;
-use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\ChoiceQuestion;
 use Symfony\Component\Console\SingleCommandApplication;
@@ -105,7 +103,6 @@ $sports = [
                 break;
             case 'f1':
                 $response = $client->request('GET', $sports['f1']['search-uri']);
-                echo $response->getContent();die;
                 if (\preg_match('@source: \'([A-Za-z/.-_]+playlist\.m3u8)\',@', $response->getContent(), $matches)) {
                     $playlistUri = $matches[1];
                 } else {
