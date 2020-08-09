@@ -4,6 +4,7 @@
     "require": {
         "php": "^7.2.5",
         "ext-ctype": "*",
+        "ext-curl": "*",
         "ext-iconv": "*",
         "chrisyue/php-m3u8": "^3.4",
         "symfony/console": "5.1.*",
