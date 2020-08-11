@@ -14,7 +14,7 @@ use Symfony\Component\HttpClient\CurlHttpClient as HttpClient;
 use Symfony\Component\Process\Process;
 
 const LASTCALL_FILEPATH = '%s/.sports-stream/.last-call';
-const PLAYLIST_REGEXP_PATTERN = '@source: \'(https?://[A-Za-z./-]+/playlist\.m3u8)\',@';
+const PLAYLIST_REGEXP_PATTERN = '@source: \'(https?://[0-9A-Za-z./-]+/playlist\.m3u8)\',@';
 
 // For NBA: http://givemereddit.stream/nba/<team>-live-stream
 // For F1: http://givemereddit.stream/formula-1/f1-live-stream
