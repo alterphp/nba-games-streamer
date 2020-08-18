@@ -16,42 +16,39 @@ use Symfony\Component\Process\Process;
 const LASTCALL_FILEPATH = '%s/.sports-stream/.last-call';
 const PLAYLIST_REGEXP_PATTERN = '@source: \'(https?://[0-9A-Za-z./-]+/playlist\.m3u8)\',@';
 
-// For NBA: http://givemereddit.stream/nba/<team>-live-stream
-// For F1: http://givemereddit.stream/formula-1/f1-live-stream
-
-$sports = [
+static $sports = [
     'nba' => [
         'search-uri' => 'http://givemenbastreams.com/nba.php?g=%s',
         'teams' => [
-            '76ers',
-            'bucks',
-            'blazers',
-            'bulls',
-            'cavaliers',
-            'celtics',
-            'clippers',
-            'grizzlies',
-            'hawks',
-            'heat',
-            'hornets',
-            'jazz',
-            'kings',
-            'knicks',
-            'lakers',
-            'magic',
-            'mavericks',
-            'nuggets',
-            'pacers',
-            'pelicans',
-            'pistons',
-            'raptors',
-            'rockets',
-            'spurs',
-            'suns',
-            'thunder',
-            'timberwolves',
-            'warriors',
-            'wizards',
+            'ATL' => 'hawks',
+            'BOS' => 'celtics',
+            'CHA' => 'hornets',
+            'CHI' => 'bulls',
+            'CLE' => 'cavaliers',
+            'DAL' => 'mavericks',
+            'DEN' => 'nuggets',
+            'DET' => 'pistons',
+            'GSW' => 'warriors',
+            'HOU' => 'rockets',
+            'IND' => 'pacers',
+            'LAC' => 'clippers',
+            'LAL' => 'lakers',
+            'MEM' => 'grizzlies',
+            'MIA' => 'heat',
+            'MIL' => 'bucks',
+            'MIN' => 'timberwolves',
+            'NOP' => 'pelicans',
+            'NYK' => 'knicks',
+            'OKC' => 'thunder',
+            'ORL' => 'magic',
+            'PHI' => '76ers',
+            'PHO' => 'suns',
+            'POR' => 'blazers',
+            'SAC' => 'kings',
+            'SAS' => 'spurs',
+            'TOR' => 'raptors',
+            'UTA' => 'jazz',
+            'WAS' => 'wizards',
         ],
     ],
     'f1' => [
@@ -80,12 +77,14 @@ $sports = [
         // Each case must define a m3u8 master $playlistUri.
         switch ($sport) {
             case 'nba':
-                foreach ($sports['nba']['teams'] as $teamName) {
-                    $responses[$teamName] = $client->request('GET', \sprintf($sports['nba']['search-uri'], $teamName));
+                // First list, current day games
+                $nbaGames = listNbaDayGames($client, $sports['nba']);
+                foreach ($nbaGames as $game) {
+                    $responses[$game['identifier']] = $client->request('GET', $game['playlist-uri']);
                 }
-                foreach ($responses as $teamName => $response) {
+                foreach ($responses as $gameIdentifier => $response) {
                     if (\preg_match(PLAYLIST_REGEXP_PATTERN, $response->getContent(), $matches)) {
-                        $playlistUris[$teamName] = $matches[1];
+                        $playlistUris[$gameIdentifier] = $matches[1];
                     }
                     unset($response);
                 }
@@ -94,13 +93,13 @@ $sports = [
                     return 0;
                 }
                 $gameQuestion = new ChoiceQuestion(
-                    \sprintf('Select your game [<comment>%s</comment>]', $lastCall['team'] ?? '?'),
-                    \array_keys($playlistUris),
-                    $lastCall['team'] ?? null
+                    \sprintf('Select your game [<comment>%s</comment>]', $lastCall['game'] ?? '?'),
+                    \array_map(function ($game) { return $game['identifier']; }, $nbaGames),
+                    $lastCall['game'] ?? null
                 );
-                $team = $questionHelper->ask($input, $output, $gameQuestion);
-                $callArgs['team'] = $team;
-                $playlistUri = $playlistUris[$team];
+                $game = $questionHelper->ask($input, $output, $gameQuestion);
+                $callArgs['game'] = $game;
+                $playlistUri = $playlistUris[$game];
                 break;
             case 'f1':
                 $response = $client->request('GET', $sports['f1']['search-uri']);
@@ -138,6 +137,36 @@ $sports = [
         $processHelper->run($output, $process);
     })
     ->run();
+
+function listNbaDayGames(HttpClient $client, array $nbaReferential): array
+{
+    $today = new \DateTimeImmutable('today', new \DateTimezone('America/New_York'));
+
+    $nbaApiGamesData = $client->request(
+        'GET',
+        \sprintf('https://data.nba.net/data/10s/prod/v1/%s/scoreboard.json', $today->format('Ymd'))
+    )->toArray();
+
+    $gamesData = [];
+    foreach ($nbaApiGamesData['games'] as $apiGameData) {
+        $gamesData[] = [
+            'identifier' => \sprintf('%s-%s', $apiGameData['hTeam']['triCode'], $apiGameData['vTeam']['triCode']),
+            'on-air' => $apiGameData['isGameActivated'],
+            'ended' => isset($apiGameData['endTimeUTC']),
+            'start-at' => new \DateTimeImmutable($apiGameData['startTimeUTC']),
+            'playlist-uri' => \sprintf(
+                $nbaReferential['search-uri'],
+                $nbaReferential['teams'][$apiGameData['hTeam']['triCode']]
+            ),
+        ];
+    }
+
+    \usort($gamesData, function ($a, $b) {
+        return ($b['on-air'] > $a['on-air']) || ($b['start-at'] < $a['start-at']) || ($b['ended'] < $a['ended']);
+    });
+
+    return $gamesData;
+}
 
 function getLastFilePath(): string
 {
