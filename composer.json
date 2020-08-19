@@ -1,5 +1,6 @@
 {
     "name": "alterphp/sports-stream",
+    "description": "Find stream for sport events",
     "type": "project",
     "license": "proprietary",
     "require": {
