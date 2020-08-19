@@ -1,4 +1,5 @@
 {
+    "name": "alterphp/sports-stream",
     "type": "project",
     "license": "proprietary",
     "require": {

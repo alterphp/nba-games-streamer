@@ -79,6 +79,10 @@ static $sports = [
             case 'nba':
                 // First list, current day games
                 $nbaGames = listNbaDayGames($client, $sports['nba']);
+                if (empty($nbaGames)) {
+                    $io->error('No NBA game found today!');
+                    return 0;
+                }
                 foreach ($nbaGames as $game) {
                     $responses[$game['identifier']] = $client->request('GET', $game['playlist-uri']);
                 }
@@ -89,7 +93,7 @@ static $sports = [
                     unset($response);
                 }
                 if (empty($playlistUris)) {
-                    $io->error(\sprintf('No NBA game found with %s', $sports['nba']['search-uri']));
+                    $io->error(\sprintf('No stream found with %s', $sports['nba']['search-uri']));
                     return 0;
                 }
                 $gameQuestion = new ChoiceQuestion(
